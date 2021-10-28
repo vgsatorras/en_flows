@@ -1,4 +1,4 @@
-# E(n) Equivariant Flows
+# E(n) Equivariant Normalizing Flows
 
 Official implementation (Pytorch 1.7.1) of:
 
@@ -109,12 +109,12 @@ EXP_NAME=qm9pos_exp_27_simple_dynamics_lr2e4 python -u main_qm9_pos.py --exp_nam
 
 
 ### QM9
-To train a flow on qm9 
+E-NF
 ```
 python main_qm9.py --nf 64 --ode_regularization 0.001 --batch_size 128 --dequantizer argmax_variational --lr 5e-4 --exp_name qm9_enf --model egnn_dynamics
 ```
 
-To train the best baseline on qm9
+To train the best baseline on qm9 (GNN attention and augmentation)
 ```
 python main_qm9.py --nf 64 --ode_regularization 0.001 --batch_size 128 --dequantizer argmax_variational --lr 5e-4 --exp_name qm9_baseline_augmentation --model gnn_dynamics --data_augmentation True
 ``` 
