@@ -8,6 +8,7 @@ bond_dict = {1: Chem.rdchem.BondType.SINGLE, 2: Chem.rdchem.BondType.DOUBLE, 3: 
 
 
 def validity_uniqueness_novelty(molecule_list):
+    print("Number of molecules to compute rdkit metrics %d" % len(molecule_list))
     mols = coords2mol_list(molecule_list)
     valid_score = MolecularMetrics.valid_total_score(mols)      # Valid score
     unique_score = MolecularMetrics.unique_total_score(mols)    # Unique score
