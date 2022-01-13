@@ -60,38 +60,28 @@ def retrieve_qm9_smiles():
         one_hot = data['one_hot'][0].view(-1, 5).type(torch.float32)
         atom_type = torch.argmax(one_hot, dim=1).numpy()
         mol = coords2mol(positions, atom_type)
-        mol = Chem.MolToSmiles(mol)
-        mols_smiles.append(mol)
+        mol = mol2smiles(mol)
+        if mol is not None:
+            mols_smiles.append(mol)
         if i % 1000 == 0:
             print("\tConverting QM9 dataset to SMILES {0:.2%}".format(float(i)/len(dataloaders['train'])))
     return mols_smiles
 
 
+def mol2smiles(mol):
+    try:
+        Chem.SanitizeMol(mol)
+    except ValueError:
+        return None
+    return Chem.MolToSmiles(mol)
+
+
 class MolecularMetrics(object):
 
     @staticmethod
-    def _avoid_sanitization_error(op):
-        try:
-            return op()
-        except ValueError:
-            return None
-
-    @staticmethod
-    def remap(x, x_min, x_max):
-        return (x - x_min) / (x_max - x_min)
-
-    @staticmethod
     def valid_lambda(x):
-        return x is not None and Chem.MolToSmiles(x) != ''
-
-    @staticmethod
-    def valid_lambda_special(x):
-        s = Chem.MolToSmiles(x) if x is not None else ''
-        return x is not None and '*' not in s and '.' not in s and s != ''
-
-    @staticmethod
-    def valid_scores(mols):
-        return np.array(list(map(MolecularMetrics.valid_lambda_special, mols)), dtype=np.float32)
+        x_smiles = mol2smiles(x)
+        return x_smiles is not None and x_smiles != ''
 
     @staticmethod
     def valid_filter(mols):
@@ -104,35 +94,31 @@ class MolecularMetrics(object):
     @staticmethod
     def novel_scores(mols, data_smiles):
         return np.array(
-            list(map(lambda x: MolecularMetrics.valid_lambda(x) and Chem.MolToSmiles(x) not in data_smiles, mols)))
-
-    @staticmethod
-    def novel_filter(mols, data):
-        return list(filter(lambda x: MolecularMetrics.valid_lambda(x) and Chem.MolToSmiles(x) not in data.smiles, mols))
+            list(map(lambda x: MolecularMetrics.valid_lambda(x) and mol2smiles(x) not in data_smiles, mols)))
 
     @staticmethod
     def novel_total_score(mols, data_smiles):
         return MolecularMetrics.novel_scores(MolecularMetrics.valid_filter(mols), data_smiles).mean()
 
     @staticmethod
-    def unique_scores(mols):
-        smiles = list(map(lambda x: Chem.MolToSmiles(x) if MolecularMetrics.valid_lambda(x) else '', mols))
-        return np.clip(
-            0.75 + np.array(list(map(lambda x: 1 / smiles.count(x) if x != '' else 0, smiles)), dtype=np.float32), 0, 1)
-
-    @staticmethod
     def unique_total_score(mols):
         v = MolecularMetrics.valid_filter(mols)
-        s = set(map(lambda x: Chem.MolToSmiles(x), v))
+        s = set(map(lambda x: mol2smiles(x), v))
+        assert (None not in s)
         print("\t%d/%d Unique/Valid" % (len(s), len(v)))
         return 0 if len(v) == 0 else len(s) / len(v)
 
 
 if __name__ == '__main__':
-    smiles_mol = 'C1CCC1'
-    print("Smiles mol %s" % smiles_mol)
-    chem_mol = Chem.MolFromSmiles(smiles_mol)
-    block_mol = Chem.MolToMolBlock(chem_mol)
-    print("Block mol:")
-    print(block_mol)
-    print(MolecularMetrics.valid_scores([chem_mol]))
+    smiles_mol = ['C1CCC1', 'C1CCC1', 'C1CCCCC1', 'C1CCCCCC1']
+    smiles_dataset = ['C1CCCCCC1']
+    chem_mols = []
+    for smile in smiles_mol:
+        print("Smiles mol %s" % smile)
+        chem_mol = Chem.MolFromSmiles(smile)
+        #block_mol = Chem.MolToMolBlock(chem_mol)
+        chem_mols.append(chem_mol)
+    print("Valid score %.4f" % MolecularMetrics.valid_total_score(chem_mols))
+    print("Unique score %.4f" % MolecularMetrics.unique_total_score(chem_mols))
+
+    print("Novel score %.4f" % MolecularMetrics.novel_total_score(chem_mols, smiles_dataset))
