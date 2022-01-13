@@ -38,8 +38,8 @@ def coords2mol(x, atom_type):
             if order > 0:
                 bond_rdkit = bond_dict[order]
                 mol.AddBond(i, j, bond_rdkit)
-        return mol
-        # rdkit.Chem.rdchem.BondType.SINGLE
+    return mol
+    # rdkit.Chem.rdchem.BondType.SINGLE
 
 
 def coords2mol_list(molecule_list):
