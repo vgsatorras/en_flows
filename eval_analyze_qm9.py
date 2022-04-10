@@ -12,7 +12,7 @@ from qm9.sampling import sample
 from qm9.analyze import analyze_stability_for_molecules
 from qm9.utils import prepare_context
 import qm9.losses as losses
-from qm9 import rdkit_functions
+from qm9 import rdkit_functions, visualizer
 
 
 def check_mask_correct(variables, node_mask):
@@ -27,6 +27,11 @@ def analyze_and_save(args, eval_args, device, flow, dequantizer, prior, nodes_di
         n_nodes = nodes_dist.sample()
         one_hot, charges, x = sample(
             args, device, flow, dequantizer, prior, n_samples=1, n_nodes=n_nodes)
+
+        if eval_args.save_to_xyz:
+            visualizer.save_xyz_file(
+                join(eval_args.model_path, 'eval/analyzed_molecules/'),
+                one_hot, charges, x, i, name='molecule')
 
         molecule_list.append((one_hot.detach(), x.detach()))
         if i % 10 == 0:
@@ -89,10 +94,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default="outputs/en_flows_pretrained",
                         help='Specify model path')
-    parser.add_argument('--n_samples', type=int, default=1000,
+    parser.add_argument('--n_samples', type=int, default=10000,
                         help='Specify model path')
-    parser.add_argument('--val_novel_unique', type=eval, default=False,
+    parser.add_argument('--val_novel_unique', type=eval, default=True,
                         help='Whether to analyze Validity, Novelty and Uniqueness')
+    parser.add_argument('--save_to_xyz', type=eval, default=False,
+                        help='save xyz files')
+
 
     eval_args, unparsed_args = parser.parse_known_args()
 
